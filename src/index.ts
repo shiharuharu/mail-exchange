@@ -265,7 +265,7 @@ function startImapListener(): void {
       fetch.on("message", (msg, seqno) => {
         const uid = results[seqno - 1];
         msg.on("body", (stream) => {
-          simpleParser(stream as Source, async (err, mail) => {
+          simpleParser(stream as unknown as Source, async (err, mail) => {
             if (err) return;
             await processEmail(mail);
             // 处理成功后再标记已读

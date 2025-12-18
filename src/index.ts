@@ -114,7 +114,7 @@ function matchRule(subject: string): ForwardRule | null {
 }
 
 // Send email to single recipient with retry
-async function sendToRecipient(mail: ParsedMail, recipient: string): Promise<RecipientResult> {
+async function sendToRecipient(mail: ParsedMail, recipient: string, from: string): Promise<RecipientResult> {
   const maxAttempts = config.retryCount ?? 3;
   let lastError = "";
 
@@ -132,18 +132,22 @@ async function sendToRecipient(mail: ParsedMail, recipient: string): Promise<Rec
           contentType: a.contentType,
         })),
       });
+      log("INFO", `  -> ${recipient}: OK${attempt > 1 ? ` (attempt ${attempt})` : ""}`);
       return { email: recipient, success: true, attempts: attempt };
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
+      log("WARN", `  -> ${recipient}: RETRY ${attempt}/${maxAttempts} - ${lastError}`);
       if (attempt < maxAttempts) await new Promise((r) => setTimeout(r, 1000 * attempt));
     }
   }
+  log("ERROR", `  -> ${recipient}: FAILED after ${maxAttempts} attempts - ${lastError}`);
   return { email: recipient, success: false, error: lastError, attempts: maxAttempts };
 }
 
 // Forward email to all recipients
-async function forwardEmail(mail: ParsedMail, rule: ForwardRule): Promise<RecipientResult[]> {
-  return Promise.all(rule.recipients.map((r) => sendToRecipient(mail, r)));
+async function forwardEmail(mail: ParsedMail, rule: ForwardRule, from: string): Promise<RecipientResult[]> {
+  log("INFO", `Forwarding from=${from} tag=${rule.tag} to=${rule.recipients.length} recipients`);
+  return Promise.all(rule.recipients.map((r) => sendToRecipient(mail, r, from)));
 }
 
 // Send reply notification to original sender
@@ -215,7 +219,7 @@ async function processEmail(mail: ParsedMail): Promise<void> {
     status: "success",
   };
 
-  const results = await forwardEmail(mail, rule);
+  const results = await forwardEmail(mail, rule, fromAddr);
   const duration = Date.now() - startTime;
   const successCount = results.filter((r) => r.success).length;
   const failCount = results.length - successCount;
@@ -223,9 +227,10 @@ async function processEmail(mail: ParsedMail): Promise<void> {
   if (failCount > 0) {
     task.status = "failed";
     task.error = `${failCount}/${results.length} failed`;
+    log("ERROR", `Forward completed: ${subject} - ${successCount}/${results.length} success, ${failCount} failed (${duration}ms)`);
+  } else {
+    log("INFO", `Forward completed: ${subject} - ${successCount}/${results.length} success (${duration}ms)`);
   }
-
-  log("INFO", `Forwarded: ${subject} -> ${successCount}/${results.length} success (${duration}ms)`);
   saveForwardedId(messageId, subject);
   await sendReplyNotification(mail, results, duration);
 

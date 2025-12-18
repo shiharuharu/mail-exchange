@@ -301,45 +301,75 @@ function startWebServer(): void {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Mail Exchange - Forward Tasks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mail Exchange</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
-    h1 { color: #333; margin-bottom: 20px; }
-    .stats { display: flex; gap: 20px; margin-bottom: 20px; }
-    .stat { background: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .stat-value { font-size: 24px; font-weight: bold; color: #2196F3; }
-    .stat-label { color: #666; font-size: 14px; }
-    table { width: 100%; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-collapse: collapse; }
-    th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
-    th { background: #fafafa; font-weight: 600; color: #333; }
-    .success { color: #4CAF50; }
-    .failed { color: #f44336; }
-    .tag { background: #e3f2fd; color: #1976D2; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-    .refresh { float: right; padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    .refresh:hover { background: #1976D2; }
-    .empty { text-align: center; padding: 40px; color: #999; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; min-height: 100vh; padding: 20px; }
+    .container { max-width: 1000px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; }
+    .brand-bar { height: 6px; background: #10B981; }
+    .header { padding: 24px 32px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 22px; color: #111827; }
+    .header p { color: #6b7280; font-size: 14px; margin-top: 4px; }
+    .refresh { padding: 8px 16px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .refresh:hover { background: #e5e7eb; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+    .stat { padding: 20px; text-align: center; border-right: 1px solid #e5e7eb; }
+    .stat:last-child { border-right: none; }
+    .stat-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-value { font-size: 28px; font-weight: 700; color: #374151; margin-top: 4px; }
+    .stat-value.success { color: #10B981; }
+    .stat-value.failed { color: #EF4444; }
+    .stat-value.zero { color: #d1d5db; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { padding: 12px 16px; text-align: left; background: #f9fafb; color: #374151; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
+    td { padding: 14px 16px; border-bottom: 1px solid #f0f0f0; color: #374151; }
+    tr:hover td { background: #f9fafb; }
+    .tag { display: inline-block; padding: 4px 10px; background: #DBEAFE; color: #1E40AF; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .badge-success { background: #D1FAE5; color: #065F46; }
+    .badge-failed { background: #FEE2E2; color: #991B1B; }
+    .empty { text-align: center; padding: 48px; color: #9ca3af; }
+    @media (max-width: 640px) {
+      .stats { grid-template-columns: 1fr; }
+      .stat { border-right: none; border-bottom: 1px solid #e5e7eb; }
+      .header { flex-direction: column; gap: 16px; text-align: center; }
+    }
   </style>
 </head>
 <body>
-  <button class="refresh" onclick="location.reload()">Refresh</button>
-  <h1>Mail Exchange - Forward Tasks</h1>
-  <div class="stats">
-    <div class="stat"><div class="stat-value" id="total">-</div><div class="stat-label">Total</div></div>
-    <div class="stat"><div class="stat-value success" id="success">-</div><div class="stat-label">Success</div></div>
-    <div class="stat"><div class="stat-value failed" id="failed">-</div><div class="stat-label">Failed</div></div>
+  <div class="container">
+    <div class="brand-bar" id="brandBar"></div>
+    <div class="header">
+      <div><h1>Mail Exchange</h1><p>Forward Tasks Dashboard</p></div>
+      <button class="refresh" onclick="location.reload()">↻ Refresh</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Total</div><div class="stat-value" id="total">-</div></div>
+      <div class="stat"><div class="stat-label">Success</div><div class="stat-value success" id="success">-</div></div>
+      <div class="stat"><div class="stat-label">Failed</div><div class="stat-value failed" id="failed">-</div></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Time</th><th>Subject</th><th>From</th><th>Tag</th><th>Recipients</th><th>Status</th></tr></thead>
+        <tbody id="tasks"></tbody>
+      </table>
+    </div>
   </div>
-  <table>
-    <thead><tr><th>Time</th><th>Subject</th><th>From</th><th>Tag</th><th>Recipients</th><th>Status</th></tr></thead>
-    <tbody id="tasks"></tbody>
-  </table>
   <script>
     fetch('/api/tasks').then(r => r.json()).then(data => {
-      document.getElementById('total').textContent = data.length;
-      document.getElementById('success').textContent = data.filter(t => t.status === 'success').length;
-      document.getElementById('failed').textContent = data.filter(t => t.status === 'failed').length;
+      const total = data.length;
+      const success = data.filter(t => t.status === 'success').length;
+      const failed = total - success;
+      document.getElementById('total').textContent = total;
+      document.getElementById('success').textContent = success;
+      const failedEl = document.getElementById('failed');
+      failedEl.textContent = failed;
+      failedEl.className = 'stat-value ' + (failed > 0 ? 'failed' : 'zero');
+      document.getElementById('brandBar').style.background = failed > 0 ? '#F59E0B' : '#10B981';
       const tbody = document.getElementById('tasks');
-      if (!data.length) {
+      if (!total) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty">No forwarding tasks yet</td></tr>';
         return;
       }
@@ -349,7 +379,7 @@ function startWebServer(): void {
         <td>\${t.from}</td>
         <td><span class="tag">\${t.matchedTag}</span></td>
         <td>\${t.recipients.join(', ')}</td>
-        <td class="\${t.status}">\${t.status}\${t.error ? ' - ' + t.error : ''}</td>
+        <td><span class="badge badge-\${t.status}">\${t.status === 'success' ? '✓ Success' : '✗ Failed'}</span>\${t.error ? '<br><small style="color:#DC2626">' + t.error + '</small>' : ''}</td>
       </tr>\`).join('');
     });
   </script>

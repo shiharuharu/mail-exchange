@@ -357,6 +357,17 @@ function startWebServer(): void {
       </table>
     </div>
   </div>
+  <div class="container" style="margin-top:20px;">
+    <div class="header" style="border-bottom:none;padding-bottom:16px;">
+      <div><h1>Forwarding Rules</h1><p id="ruleCount">-</p></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tag</th><th>Recipients</th></tr></thead>
+        <tbody id="rules"></tbody>
+      </table>
+    </div>
+  </div>
   <script>
     fetch('/api/tasks').then(r => r.json()).then(data => {
       const total = data.length;
@@ -380,6 +391,13 @@ function startWebServer(): void {
         <td><span class="tag">\${t.matchedTag}</span></td>
         <td>\${t.recipients.join(', ')}</td>
         <td><span class="badge badge-\${t.status}">\${t.status === 'success' ? '✓ Success' : '✗ Failed'}</span>\${t.error ? '<br><small style="color:#DC2626">' + t.error + '</small>' : ''}</td>
+      </tr>\`).join('');
+    });
+    fetch('/api/rules').then(r => r.json()).then(rules => {
+      document.getElementById('ruleCount').textContent = rules.length + ' rules configured';
+      document.getElementById('rules').innerHTML = rules.map(r => \`<tr>
+        <td><span class="tag">\${r.tag}</span></td>
+        <td>\${r.recipients.join(', ')}</td>
       </tr>\`).join('');
     });
   </script>

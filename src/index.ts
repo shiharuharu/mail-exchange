@@ -262,18 +262,20 @@ function startImapListener(): void {
     imap.search(["UNSEEN"], (err, results) => {
       if (err || !results.length) return;
       const fetch = imap.fetch(results, { bodies: "" });
-      fetch.on("message", (msg, seqno) => {
-        const uid = results[seqno - 1];
+      fetch.on("message", (msg) => {
+        let uid: number | undefined;
+        msg.on("attributes", (attrs) => {
+          uid = attrs.uid;
+        });
         msg.on("body", (stream) => {
           simpleParser(stream as unknown as Source, async (err, mail) => {
-            if (err) return;
-            await processEmail(mail);
-            // 标记已读
             if (uid) {
-              imap.addFlags(uid, ["\\Seen"], (err) => {
-                if (err) log("WARN", `Failed to mark as seen: ${mail.subject}`);
+              imap.addFlags(uid, ["\\Seen"], (e) => {
+                if (e) log("WARN", `Failed to mark as seen (uid=${uid})`);
               });
             }
+            if (err) return;
+            await processEmail(mail);
           });
         });
       });

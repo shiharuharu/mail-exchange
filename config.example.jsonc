@@ -48,5 +48,12 @@
   // "allowedSenders": ["@example.com", "admin@company.com"],
 
   // 发送失败重试次数（可选，默认 3 次）
-  // "retryCount": 3
+  // "retryCount": 3,
+
+  // 日志等级（可选，默认 INFO）
+  // DEBUG: 全部日志
+  // INFO: 常规信息 + 警告 + 错误
+  // WARN: 警告 + 错误
+  // ERROR: 仅错误
+  // "logLevel": "INFO"
 }

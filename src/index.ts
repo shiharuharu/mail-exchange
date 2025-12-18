@@ -30,6 +30,7 @@ interface Config {
   forwardPrefix?: string;
   allowedSenders?: string[];
   retryCount?: number;
+  logLevel?: "DEBUG" | "INFO" | "WARN" | "ERROR";
 }
 
 interface ForwardTask {
@@ -77,10 +78,14 @@ function getMessageId(mail: ParsedMail): string {
 }
 
 // Logger
-function log(level: "INFO" | "ERROR" | "WARN", message: string): void {
+const LOG_LEVELS = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
+function log(level: "DEBUG" | "INFO" | "WARN" | "ERROR", message: string): void {
+  const minLevel = LOG_LEVELS[config?.logLevel || "INFO"];
+  if (LOG_LEVELS[level] < minLevel) return;
+
   const timestamp = new Date().toISOString();
   const line = `[${timestamp}] [${level}] ${message}\n`;
-  console[level === "ERROR" ? "error" : "log"](message);
+  console[level === "ERROR" ? "error" : "log"](`[${level}] ${message}`);
   appendFileSync(LOG_FILE, line);
 }
 

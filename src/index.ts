@@ -1,5 +1,5 @@
 import Imap from "imap";
-import { simpleParser, ParsedMail } from "mailparser";
+import { simpleParser, ParsedMail, Source } from "mailparser";
 import nodemailer from "nodemailer";
 import express from "express";
 import { readFileSync, existsSync, appendFileSync } from "fs";
@@ -265,7 +265,7 @@ function startImapListener(): void {
       fetch.on("message", (msg, seqno) => {
         const uid = results[seqno - 1];
         msg.on("body", (stream) => {
-          simpleParser(stream, async (err, mail) => {
+          simpleParser(stream as Source, async (err, mail) => {
             if (err) return;
             await processEmail(mail);
             // 处理成功后再标记已读

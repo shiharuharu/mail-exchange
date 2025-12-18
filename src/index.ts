@@ -50,20 +50,30 @@ let config: Config;
 let transporter: nodemailer.Transporter;
 const DATA_DIR = process.env.DATA_DIR || ".";
 const LOG_FILE = `${DATA_DIR}/mail-exchange.log`;
-const FORWARDED_FILE = `${DATA_DIR}/.forwarded-uids`;
-const forwardedUids = new Set<number>();
+const FORWARDED_FILE = `${DATA_DIR}/.forwarded-ids`;
+const forwardedIds = new Set<string>();
 
-// Load/save forwarded UIDs
-function loadForwardedUids(): void {
+// Load/save forwarded Message-IDs
+function loadForwardedIds(): void {
   if (existsSync(FORWARDED_FILE)) {
     const data = readFileSync(FORWARDED_FILE, "utf-8").trim();
-    if (data) data.split("\n").forEach((uid) => forwardedUids.add(Number(uid)));
+    if (data) data.split("\n").forEach((id) => forwardedIds.add(id));
   }
 }
 
-function saveForwardedUid(uid: number): void {
-  forwardedUids.add(uid);
-  appendFileSync(FORWARDED_FILE, `${uid}\n`);
+function saveForwardedId(messageId: string, subject: string): void {
+  forwardedIds.add(messageId);
+  appendFileSync(FORWARDED_FILE, `${messageId}\n`);
+  log("INFO", `Marked as processed: ${subject}`);
+}
+
+function isAlreadyForwarded(mail: ParsedMail): boolean {
+  const messageId = mail.messageId || mail.headers?.get("message-id")?.toString();
+  return messageId ? forwardedIds.has(messageId) : false;
+}
+
+function getMessageId(mail: ParsedMail): string {
+  return mail.messageId || mail.headers?.get("message-id")?.toString() || `${Date.now()}-${Math.random()}`;
 }
 
 // Logger
@@ -165,15 +175,21 @@ function isSenderAllowed(email: string): boolean {
 }
 
 // Process incoming email
-async function processEmail(mail: ParsedMail, uid: number): Promise<void> {
+async function processEmail(mail: ParsedMail): Promise<void> {
   const startTime = Date.now();
   const subject = mail.subject || "(no subject)";
   const from = mail.from?.text || "unknown";
   const fromAddr = mail.from?.value?.[0]?.address || "";
+  const messageId = getMessageId(mail);
+
+  if (isAlreadyForwarded(mail)) {
+    log("INFO", `Already forwarded (skip): ${subject}`);
+    return;
+  }
 
   if (!isSenderAllowed(fromAddr)) {
     log("WARN", `Sender not allowed: ${fromAddr} - ${subject}`);
-    saveForwardedUid(uid);
+    saveForwardedId(messageId, subject);
     return;
   }
 
@@ -181,7 +197,7 @@ async function processEmail(mail: ParsedMail, uid: number): Promise<void> {
 
   if (!rule) {
     log("INFO", `No matching rule for: ${subject}`);
-    saveForwardedUid(uid);
+    saveForwardedId(messageId, subject);
     return;
   }
 
@@ -206,7 +222,7 @@ async function processEmail(mail: ParsedMail, uid: number): Promise<void> {
   }
 
   log("INFO", `Forwarded: ${subject} -> ${successCount}/${results.length} success (${duration}ms)`);
-  saveForwardedUid(uid);
+  saveForwardedId(messageId, subject);
   await sendReplyNotification(mail, results, duration);
 
   tasks.unshift(task);
@@ -231,14 +247,11 @@ function startImapListener(): void {
   imap.on("mail", () => {
     imap.search(["UNSEEN"], (err, results) => {
       if (err || !results.length) return;
-      const newUids = results.filter((uid) => !forwardedUids.has(uid));
-      if (!newUids.length) return;
-      const fetch = imap.fetch(newUids, { bodies: "", markSeen: true });
-      fetch.on("message", (msg, seqno) => {
-        const uid = newUids[seqno - 1];
+      const fetch = imap.fetch(results, { bodies: "", markSeen: true });
+      fetch.on("message", (msg) => {
         msg.on("body", (stream) => {
           simpleParser(stream, (err, mail) => {
-            if (!err) processEmail(mail, uid);
+            if (!err) processEmail(mail);
           });
         });
       });
@@ -341,7 +354,7 @@ process.on("SIGINT", shutdown);
 // Main
 config = loadConfig();
 transporter = nodemailer.createTransport(config.smtp);
-loadForwardedUids();
-log("INFO", `Loaded ${config.rules.length} rules, ${forwardedUids.size} forwarded UIDs`);
+loadForwardedIds();
+log("INFO", `Loaded ${config.rules.length} rules, ${forwardedIds.size} forwarded IDs`);
 startWebServer();
 startImapListener();

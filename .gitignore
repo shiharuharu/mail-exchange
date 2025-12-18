@@ -4,4 +4,5 @@ dist/
 data/
 *.log
 .forwarded-uids
+.forwarded-ids
 config.jsonc

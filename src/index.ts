@@ -27,6 +27,7 @@ interface Config {
   };
   rules: ForwardRule[];
   webPort: number;
+  forwardPrefix?: string;
 }
 
 interface ForwardTask {
@@ -106,7 +107,7 @@ async function sendToRecipient(mail: ParsedMail, recipient: string): Promise<Rec
     await transporter.sendMail({
       from: config.smtp.auth.user,
       to: recipient,
-      subject: `[Fwd] ${mail.subject}`,
+      subject: config.forwardPrefix ? `${config.forwardPrefix} ${mail.subject}` : mail.subject,
       text: mail.text || "",
       html: mail.html || undefined,
       attachments: mail.attachments?.map((a) => ({

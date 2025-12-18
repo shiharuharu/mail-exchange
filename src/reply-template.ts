@@ -27,14 +27,15 @@ export function getReplyHtml(data: ReplyData): string {
 
   const rows = data.results
     .map((r) => {
-      const retryInfo = r.attempts && r.attempts > 1 ? ` (${r.attempts}次)` : "";
+      const retries = (r.attempts || 1) - 1;
+      const retryInfo = retries > 0 ? `<div style="font-size:11px;color:#6b7280;margin-top:2px;">重试 ${retries} 次后${r.success ? "成功" : "失败"}</div>` : "";
       const badge = r.success
-        ? `<span style="display:inline-block;padding:4px 10px;background-color:#D1FAE5;color:#065F46;font-size:12px;font-weight:bold;">✓ 成功${retryInfo}</span>`
-        : `<span style="display:inline-block;padding:4px 10px;background-color:#FEE2E2;color:#991B1B;font-size:12px;font-weight:bold;">✗ 失败${retryInfo}</span>`;
+        ? '<span style="display:inline-block;padding:4px 10px;background-color:#D1FAE5;color:#065F46;font-size:12px;font-weight:bold;">✓ 成功</span>'
+        : '<span style="display:inline-block;padding:4px 10px;background-color:#FEE2E2;color:#991B1B;font-size:12px;font-weight:bold;">✗ 失败</span>';
       const errorLine = r.error ? `<div style="margin-top:4px;font-size:12px;color:#DC2626;">${r.error}</div>` : "";
       return `<tr>
         <td style="padding:12px;border-bottom:1px solid #f0f0f0;color:#374151;">${r.email}${errorLine}</td>
-        <td style="padding:12px;border-bottom:1px solid #f0f0f0;text-align:right;vertical-align:top;">${badge}</td>
+        <td style="padding:12px;border-bottom:1px solid #f0f0f0;text-align:right;vertical-align:top;">${badge}${retryInfo}</td>
       </tr>`;
     })
     .join("");
@@ -100,7 +101,8 @@ export function getReplyText(data: ReplyData): string {
   const successCount = data.results.filter((r) => r.success).length;
   const failCount = data.results.length - successCount;
   const lines = data.results.map((r) => {
-    const retryInfo = r.attempts && r.attempts > 1 ? ` (${r.attempts}次)` : "";
+    const retries = (r.attempts || 1) - 1;
+    const retryInfo = retries > 0 ? ` (重试 ${retries} 次后${r.success ? "成功" : "失败"})` : "";
     return `  ${r.email}: ${r.success ? "成功" : "失败 - " + (r.error || "未知")}${retryInfo}`;
   });
 

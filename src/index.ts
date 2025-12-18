@@ -268,10 +268,12 @@ function startImapListener(): void {
           simpleParser(stream as unknown as Source, async (err, mail) => {
             if (err) return;
             await processEmail(mail);
-            // 处理成功后再标记已读
-            imap.addFlags(uid, ["\\Seen"], (err) => {
-              if (err) log("WARN", `Failed to mark as seen: ${mail.subject}`);
-            });
+            // 标记已读
+            if (uid) {
+              imap.addFlags(uid, ["\\Seen"], (err) => {
+                if (err) log("WARN", `Failed to mark as seen: ${mail.subject}`);
+              });
+            }
           });
         });
       });

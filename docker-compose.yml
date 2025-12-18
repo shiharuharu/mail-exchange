@@ -1,0 +1,13 @@
+services:
+  mail-exchange:
+    build: .
+    container_name: mail-exchange
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config.jsonc:/app/config.jsonc:ro
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Shanghai
+      - DATA_DIR=/app/data

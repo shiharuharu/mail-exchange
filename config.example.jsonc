@@ -1,0 +1,42 @@
+{
+  // IMAP 邮箱配置 - 用于接收邮件
+  "imap": {
+    "user": "your-email@example.com",
+    "password": "your-password",
+    "host": "imap.example.com",
+    "port": 993,
+    "tls": true
+  },
+
+  // SMTP 配置 - 用于发送转发邮件
+  "smtp": {
+    "host": "smtp.example.com",
+    "port": 587,
+    "secure": false,  // true for 465, false for other ports
+    "auth": {
+      "user": "your-email@example.com",
+      "pass": "your-password"
+    }
+  },
+
+  // 转发规则
+  // tag: 邮件标题中需要匹配的标记（不区分大小写）
+  // recipients: 匹配后转发到的邮件列表
+  "rules": [
+    {
+      "tag": "[urgent]",
+      "recipients": ["urgent-team@example.com", "manager@example.com"]
+    },
+    {
+      "tag": "[info]",
+      "recipients": ["info-list@example.com"]
+    },
+    {
+      "tag": "[bug]",
+      "recipients": ["dev-team@example.com"]
+    }
+  ],
+
+  // Web 界面端口
+  "webPort": 3000
+}

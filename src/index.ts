@@ -2,7 +2,7 @@ import Imap from "imap";
 import { simpleParser, ParsedMail, Source } from "mailparser";
 import nodemailer from "nodemailer";
 import express from "express";
-import { readFileSync, existsSync, appendFileSync } from "fs";
+import { readFileSync, existsSync, appendFileSync, writeFileSync } from "fs";
 import { getReplySubject, getReplyHtml, getReplyText, ReplyData, RecipientResult } from "./reply-template";
 
 // Types
@@ -52,6 +52,7 @@ let transporter: nodemailer.Transporter;
 const DATA_DIR = process.env.DATA_DIR || ".";
 const LOG_FILE = `${DATA_DIR}/mail-exchange.log`;
 const FORWARDED_FILE = `${DATA_DIR}/.forwarded-ids`;
+const TASKS_FILE = `${DATA_DIR}/.tasks.json`;
 const forwardedIds = new Set<string>();
 
 // Load/save forwarded Message-IDs
@@ -66,6 +67,20 @@ function saveForwardedId(messageId: string, subject: string): void {
   forwardedIds.add(messageId);
   appendFileSync(FORWARDED_FILE, `${messageId}\n`);
   log("INFO", `Marked as processed: ${subject}`);
+}
+
+function loadTasks(): void {
+  if (existsSync(TASKS_FILE)) {
+    try {
+      const data = JSON.parse(readFileSync(TASKS_FILE, "utf-8"));
+      tasks.push(...data);
+      taskId = tasks.length;
+    } catch {}
+  }
+}
+
+function saveTasks(): void {
+  writeFileSync(TASKS_FILE, JSON.stringify(tasks.slice(0, 100)));
 }
 
 function isAlreadyForwarded(mail: ParsedMail): boolean {
@@ -237,10 +252,16 @@ async function processEmail(mail: ParsedMail): Promise<void> {
     log("INFO", `Forward completed: ${subject} - ${successCount}/${results.length} success (${duration}ms)`);
   }
   saveForwardedId(messageId, subject);
-  await sendReplyNotification(mail, results, duration);
 
   tasks.unshift(task);
   if (tasks.length > 100) tasks.pop();
+  saveTasks();
+
+  try {
+    await sendReplyNotification(mail, results, duration);
+  } catch (err) {
+    log("WARN", `Failed to send reply notification: ${err instanceof Error ? err.message : err}`);
+  }
 }
 
 // IMAP listener
@@ -328,8 +349,8 @@ function startWebServer(): void {
     th { padding: 12px 16px; text-align: left; background: #f9fafb; color: #374151; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
     td { padding: 14px 16px; border-bottom: 1px solid #f0f0f0; color: #374151; }
     tr:hover td { background: #f9fafb; }
-    .tag { display: inline-block; padding: 4px 10px; background: #DBEAFE; color: #1E40AF; border-radius: 12px; font-size: 12px; font-weight: 600; }
-    .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .tag { display: inline-block; padding: 4px 10px; background: #DBEAFE; color: #1E40AF; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
     .badge-success { background: #D1FAE5; color: #065F46; }
     .badge-failed { background: #FEE2E2; color: #991B1B; }
     .empty { text-align: center; padding: 48px; color: #9ca3af; }
@@ -427,6 +448,7 @@ process.on("SIGINT", shutdown);
 config = loadConfig();
 transporter = nodemailer.createTransport(config.smtp);
 loadForwardedIds();
-log("INFO", `Loaded ${config.rules.length} rules, ${forwardedIds.size} forwarded IDs`);
+loadTasks();
+log("INFO", `Loaded ${config.rules.length} rules, ${forwardedIds.size} forwarded IDs, ${tasks.length} tasks`);
 startWebServer();
 startImapListener();

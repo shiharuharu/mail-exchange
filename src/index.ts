@@ -29,6 +29,7 @@ interface Config {
   webPort: number;
   forwardPrefix?: string;
   allowedSenders?: string[];
+  retryCount?: number;
 }
 
 interface ForwardTask {
@@ -102,25 +103,32 @@ function matchRule(subject: string): ForwardRule | null {
   return null;
 }
 
-// Send email to single recipient
+// Send email to single recipient with retry
 async function sendToRecipient(mail: ParsedMail, recipient: string): Promise<RecipientResult> {
-  try {
-    await transporter.sendMail({
-      from: config.smtp.auth.user,
-      to: recipient,
-      subject: config.forwardPrefix ? `${config.forwardPrefix} ${mail.subject}` : mail.subject,
-      text: mail.text || "",
-      html: mail.html || undefined,
-      attachments: mail.attachments?.map((a) => ({
-        filename: a.filename,
-        content: a.content,
-        contentType: a.contentType,
-      })),
-    });
-    return { email: recipient, success: true };
-  } catch (err) {
-    return { email: recipient, success: false, error: err instanceof Error ? err.message : String(err) };
+  const maxAttempts = config.retryCount ?? 3;
+  let lastError = "";
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await transporter.sendMail({
+        from: config.smtp.auth.user,
+        to: recipient,
+        subject: config.forwardPrefix ? `${config.forwardPrefix} ${mail.subject}` : mail.subject,
+        text: mail.text || "",
+        html: mail.html || undefined,
+        attachments: mail.attachments?.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          contentType: a.contentType,
+        })),
+      });
+      return { email: recipient, success: true, attempts: attempt };
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      if (attempt < maxAttempts) await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
   }
+  return { email: recipient, success: false, error: lastError, attempts: maxAttempts };
 }
 
 // Forward email to all recipients

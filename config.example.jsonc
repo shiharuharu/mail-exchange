@@ -45,5 +45,8 @@
 
   // 允许的发件人清单（可选，不配置则允许所有）
   // 支持邮箱地址或域名，不区分大小写
-  // "allowedSenders": ["@example.com", "admin@company.com"]
+  // "allowedSenders": ["@example.com", "admin@company.com"],
+
+  // 发送失败重试次数（可选，默认 3 次）
+  // "retryCount": 3
 }

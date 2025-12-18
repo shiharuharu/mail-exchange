@@ -4,6 +4,7 @@ export interface RecipientResult {
   email: string;
   success: boolean;
   error?: string;
+  attempts?: number;
 }
 
 export interface ReplyData {
@@ -26,9 +27,10 @@ export function getReplyHtml(data: ReplyData): string {
 
   const rows = data.results
     .map((r) => {
+      const retryInfo = r.attempts && r.attempts > 1 ? ` (${r.attempts}次)` : "";
       const badge = r.success
-        ? '<span style="display:inline-block;padding:4px 10px;background-color:#D1FAE5;color:#065F46;font-size:12px;font-weight:bold;">✓ 成功</span>'
-        : '<span style="display:inline-block;padding:4px 10px;background-color:#FEE2E2;color:#991B1B;font-size:12px;font-weight:bold;">✗ 失败</span>';
+        ? `<span style="display:inline-block;padding:4px 10px;background-color:#D1FAE5;color:#065F46;font-size:12px;font-weight:bold;">✓ 成功${retryInfo}</span>`
+        : `<span style="display:inline-block;padding:4px 10px;background-color:#FEE2E2;color:#991B1B;font-size:12px;font-weight:bold;">✗ 失败${retryInfo}</span>`;
       const errorLine = r.error ? `<div style="margin-top:4px;font-size:12px;color:#DC2626;">${r.error}</div>` : "";
       return `<tr>
         <td style="padding:12px;border-bottom:1px solid #f0f0f0;color:#374151;">${r.email}${errorLine}</td>
@@ -97,7 +99,10 @@ export function getReplyHtml(data: ReplyData): string {
 export function getReplyText(data: ReplyData): string {
   const successCount = data.results.filter((r) => r.success).length;
   const failCount = data.results.length - successCount;
-  const lines = data.results.map((r) => `  ${r.email}: ${r.success ? "成功" : "失败 - " + (r.error || "未知")}`);
+  const lines = data.results.map((r) => {
+    const retryInfo = r.attempts && r.attempts > 1 ? ` (${r.attempts}次)` : "";
+    return `  ${r.email}: ${r.success ? "成功" : "失败 - " + (r.error || "未知")}${retryInfo}`;
+  });
 
   return `[Mail Exchange] 邮件转发报告
 

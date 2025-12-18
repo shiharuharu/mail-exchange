@@ -181,6 +181,10 @@ async function processEmail(mail: ParsedMail): Promise<void> {
   const from = mail.from?.text || "unknown";
   const fromAddr = mail.from?.value?.[0]?.address || "";
   const messageId = getMessageId(mail);
+  const mailSize = Math.round((mail.text?.length || 0) / 1024) + "KB";
+  const attachCount = mail.attachments?.length || 0;
+
+  log("INFO", `New mail: "${subject}" from=${fromAddr} size=${mailSize} attachments=${attachCount}`);
 
   if (isAlreadyForwarded(mail)) {
     log("INFO", `Already forwarded (skip): ${subject}`);

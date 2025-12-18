@@ -38,8 +38,12 @@
   ],
 
   // Web 界面端口
-  "webPort": 3000
+  "webPort": 3000,
 
   // 转发邮件标题前缀（可选，不配置则无前缀）
-  // "forwardPrefix": "[Fwd]"
+  // "forwardPrefix": "[Fwd]",
+
+  // 允许的发件人清单（可选，不配置则允许所有）
+  // 支持邮箱地址或域名，不区分大小写
+  // "allowedSenders": ["@example.com", "admin@company.com"]
 }

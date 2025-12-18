@@ -28,6 +28,7 @@ interface Config {
   rules: ForwardRule[];
   webPort: number;
   forwardPrefix?: string;
+  allowedSenders?: string[];
 }
 
 interface ForwardTask {
@@ -148,11 +149,26 @@ async function sendReplyNotification(mail: ParsedMail, results: RecipientResult[
   });
 }
 
+// Check if sender is allowed
+function isSenderAllowed(email: string): boolean {
+  if (!config.allowedSenders?.length) return true;
+  const addr = email.toLowerCase();
+  return config.allowedSenders.some((s) => addr.includes(s.toLowerCase()));
+}
+
 // Process incoming email
 async function processEmail(mail: ParsedMail, uid: number): Promise<void> {
   const startTime = Date.now();
   const subject = mail.subject || "(no subject)";
   const from = mail.from?.text || "unknown";
+  const fromAddr = mail.from?.value?.[0]?.address || "";
+
+  if (!isSenderAllowed(fromAddr)) {
+    log("WARN", `Sender not allowed: ${fromAddr} - ${subject}`);
+    saveForwardedUid(uid);
+    return;
+  }
+
   const rule = matchRule(subject);
 
   if (!rule) {

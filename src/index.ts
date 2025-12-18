@@ -251,11 +251,17 @@ function startImapListener(): void {
   imap.on("mail", () => {
     imap.search(["UNSEEN"], (err, results) => {
       if (err || !results.length) return;
-      const fetch = imap.fetch(results, { bodies: "", markSeen: true });
-      fetch.on("message", (msg) => {
+      const fetch = imap.fetch(results, { bodies: "" });
+      fetch.on("message", (msg, seqno) => {
+        const uid = results[seqno - 1];
         msg.on("body", (stream) => {
-          simpleParser(stream, (err, mail) => {
-            if (!err) processEmail(mail);
+          simpleParser(stream, async (err, mail) => {
+            if (err) return;
+            await processEmail(mail);
+            // 处理成功后再标记已读
+            imap.addFlags(uid, ["\\Seen"], (err) => {
+              if (err) log("WARN", `Failed to mark as seen: ${mail.subject}`);
+            });
           });
         });
       });

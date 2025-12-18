@@ -322,6 +322,14 @@ function startWebServer(): void {
   });
 }
 
+// Graceful shutdown
+function shutdown(): void {
+  log("INFO", "Shutting down...");
+  process.exit(0);
+}
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
+
 // Main
 config = loadConfig();
 transporter = nodemailer.createTransport(config.smtp);

@@ -1,7 +1,7 @@
 {
   // IMAP 邮箱配置 - 用于接收邮件
   "imap": {
-    "user": "your-email@example.com",
+    "user": "exchange@example.com",
     "password": "your-password",
     "host": "imap.example.com",
     "port": 993,
@@ -12,48 +12,42 @@
   "smtp": {
     "host": "smtp.example.com",
     "port": 587,
-    "secure": false,  // true for 465, false for other ports
+    "secure": false,
     "auth": {
-      "user": "your-email@example.com",
+      "user": "exchange@example.com",
       "pass": "your-password"
     }
   },
 
-  // 转发规则
-  // tag: 邮件标题中需要匹配的标记（不区分大小写）
-  // recipients: 匹配后转发到的邮件列表
+  // 转发规则 (标签不区分大小写，支持中英文)
   "rules": [
     {
-      "tag": "[urgent]",
-      "recipients": ["urgent-team@example.com", "manager@example.com"]
+      "tag": "[PHOTO]",
+      "recipients": ["user1@example.com", "user2@example.com"]
     },
     {
-      "tag": "[info]",
-      "recipients": ["info-list@example.com"]
+      "tag": "[INVOICE]",
+      "recipients": ["finance@example.com"]
     },
     {
-      "tag": "[bug]",
-      "recipients": ["dev-team@example.com"]
+      "tag": "[TEST]",
+      "recipients": ["admin@example.com"]
     }
   ],
 
   // Web 界面端口
   "webPort": 3000,
 
-  // 转发邮件标题前缀（可选，不配置则无前缀）
-  // "forwardPrefix": "[Fwd]",
+  // 转发邮件标题前缀（可选）
+  "forwardPrefix": "[Fwd]",
 
   // 允许的发件人清单（可选，不配置则允许所有）
   // 支持邮箱地址或域名，不区分大小写
-  // "allowedSenders": ["@example.com", "admin@company.com"],
+  "allowedSenders": ["@example.com", "admin@company.com"],
 
   // 发送失败重试次数（可选，默认 3 次）
-  // "retryCount": 3,
+  "retryCount": 3,
 
-  // 日志等级（可选，默认 INFO）
-  // DEBUG: 全部日志
-  // INFO: 常规信息 + 警告 + 错误
-  // WARN: 警告 + 错误
-  // ERROR: 仅错误
-  // "logLevel": "INFO"
+  // 日志等级: DEBUG / INFO / WARN / ERROR（默认 INFO）
+  "logLevel": "DEBUG"
 }
